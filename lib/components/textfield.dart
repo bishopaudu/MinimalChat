@@ -5,16 +5,20 @@ class CustomTextField extends StatelessWidget {
       {super.key,
       required this.text,
       required this.obsecureText,
-      required this.controller});
+      required this.controller,
+     this.focusNode
+      });
   final String text;
   final bool obsecureText;
   final TextEditingController controller;
+  final FocusNode? focusNode;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 25),
       child: TextField(
+        focusNode: focusNode,
         obscureText: obsecureText,
         controller: controller,
         decoration: InputDecoration(

@@ -5,19 +5,53 @@ import 'package:minimalchat/components/textfield.dart';
 import 'package:minimalchat/services/auth/auth_services.dart';
 import 'package:minimalchat/services/auth/chatservices/chat_service.dart';
 
-class ChatPage extends StatelessWidget {
+class ChatPage extends StatefulWidget {
   ChatPage(
       {super.key, required this.recieverUsername, required this.receiverId});
   final String recieverUsername;
   final String receiverId;
+
+  @override
+  State<ChatPage> createState() => _ChatPageState();
+}
+
+class _ChatPageState extends State<ChatPage> {
   final ChatService chatService = ChatService();
   final AuthService authService = AuthService();
   final TextEditingController messageController = TextEditingController();
+  FocusNode focusNode = FocusNode();
+  final ScrollController scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    focusNode.addListener(() {
+      if (focusNode.hasFocus) {
+        //cause a delay so the keyboard has time to show up
+        //the amouint of remaining space wil be calculated
+        //then scroll down
+        Future.delayed(const Duration(milliseconds: 500), () => scrollDown());
+      }
+    });
+
+    Future.delayed(const Duration(milliseconds: 500), () => scrollDown());
+  }
+
+  void scrollDown() {
+    scrollController.animateTo(scrollController.position.maxScrollExtent,
+        duration: const Duration(seconds: 1), curve: Curves.fastOutSlowIn);
+  }
+
+  @override
+  void dispose() {
+    focusNode.dispose();
+    super.dispose();
+  }
 
   //send message
   void sendMessage(context) async {
     if (messageController.text.isNotEmpty) {
-      await chatService.sendMessage(receiverId, messageController.text);
+      await chatService.sendMessage(widget.receiverId, messageController.text);
       messageController.clear();
     } else {
       showDialog(
@@ -26,15 +60,16 @@ class ChatPage extends StatelessWidget {
                 title: Text('Empty Message'),
               ));
     }
+    scrollDown();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(recieverUsername),
+        title: Text(widget.recieverUsername),
         actions: [
-          IconButton(onPressed: (){}, icon: Icon(Icons.display_settings))
+          IconButton(onPressed: () {}, icon: const Icon(Icons.display_settings))
         ],
       ),
       body: Column(
@@ -51,7 +86,7 @@ class ChatPage extends StatelessWidget {
     String senderId = authService.getCurrentUser()!.uid;
     print(senderId);
     return StreamBuilder(
-        stream: chatService.getMessage(receiverId, senderId),
+        stream: chatService.getMessage(widget.receiverId, senderId),
         builder: (context, snapShot) {
           if (snapShot.hasError) {
             return const Text('Error');
@@ -61,6 +96,7 @@ class ChatPage extends StatelessWidget {
           }
           // return the listview
           return ListView(
+              controller: scrollController,
               children: snapShot.data!.docs
                   .map((data) => _buildMessageItem(data))
                   .toList());
@@ -76,7 +112,6 @@ class ChatPage extends StatelessWidget {
     return Container(
         alignment: alignment,
         child: Column(
-        //  crossAxisAlignment:isCurrentUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
             ChatBubble(
               message: data["meassage"],
@@ -85,33 +120,6 @@ class ChatPage extends StatelessWidget {
           ],
         ));
   }
-  /*Widget _buildMessageItem(DocumentSnapshot doc) {
-  Map<String, dynamic>? data = doc.data() as Map<String, dynamic>?;
-
-  if (data == null || !data.containsKey('senderId')) {
-    // Handle the case where data is null or senderId is missing
-    return SizedBox(); // or return an appropriate placeholder widget
-  }
-
-  bool isCurrentUser =
-      data['senderId'] == authService.getCurrentUser()!.uid;
-  var alignment = isCurrentUser ? Alignment.centerRight : Alignment.centerLeft;
-  
-  return Container(
-    alignment: alignment,
-    child: Column(
-      crossAxisAlignment: isCurrentUser
-          ? CrossAxisAlignment.end
-          : CrossAxisAlignment.start,
-      children: [
-        ChatBubble(
-          message: data['messages'],
-          isCurrentUser: isCurrentUser,
-        ),
-      ],
-    ),
-  );
-}*/
 
   Widget _buildUserInput() {
     return Padding(
@@ -120,16 +128,21 @@ class ChatPage extends StatelessWidget {
         children: [
           Expanded(
             child: CustomTextField(
-                text: 'Type Your Message',
-                obsecureText: false,
-                controller: messageController),
+              text: 'Type Your Message',
+              obsecureText: false,
+              controller: messageController,
+              focusNode: focusNode,
+            ),
           ),
           Container(
             decoration: const BoxDecoration(
                 color: Colors.green, shape: BoxShape.circle),
             margin: const EdgeInsets.only(right: 10),
             child: IconButton(
-                onPressed:(){sendMessage(BuildContext);} , icon: const Icon(Icons.send)),
+                onPressed: () {
+                  sendMessage(context);
+                },
+                icon: const Icon(Icons.send)),
           )
         ],
       ),

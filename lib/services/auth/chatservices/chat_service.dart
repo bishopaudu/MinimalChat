@@ -45,7 +45,7 @@ class ChatService {
 
   Stream<QuerySnapshot> getMessage(String userId, receiverId) {
     //construct a chatroom id for the tood users
-    if (userId == null || receiverId == null) {
+    if (receiverId == null) {
       return const Stream.empty();
     } else {
         List<String> ids = [userId, receiverId];
